@@ -97,16 +97,28 @@ with tabs[1]:
     input_text = st.text_area("번역할 대사를 입력하세요", height=200)
     if st.button("즉시 번역 시작 ✨"):
         if input_text:
-            result = smart_translate(input_text, source_mode, lang_map[target_lang_name], is_natural)
-            st.success(result)
+            result = server_files = []
+        for root, dirs, filenames in os.walk(current_dir):
+            if '.git' in dirs: dirs.remove('.git')
+            if '.streamlit' in dirs: dirs.remove('.streamlit')
+            
+            for filename in filenames:
+                if filename.endswith(('.txt', '.json', '.csv', '.xlsx')):
+                    rel_path = os.path.relpath(os.path.join(root, filename), current_dir)
+                    server_files.append(rel_path)
+        
+        server_files.sort()
 
-# 3. 파일 번역 (JSON/TXT)
-with tabs[2]:
-    st.header("📂 파일 정밀 번역")
-    
-    # 1. 파일 출처 선택 (라디오 버튼)
-    file_source = st.radio("파일을 어디서 가져올까요?", ["내 기기에서 업로드", "서버 저장소에서 선택"], horizontal=True)
-    
+        if server_files:
+            target_file = st.selectbox("서버에 있는 파일을 선택하세요", server_files)
+            if st.button("파일 불러오기"):
+                full_path = os.path.join(current_dir, target_file)
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    selected_content = f.read()
+                st.success(f"✅ '{target_file}' 내용을 불러왔습니다!")
+        else:
+            # 파일이 없을 때 경고창은 이 한 줄로 끝!
+            st.warning("서버 저장소에 번역 가능한 파일이 없습니다.")
     final_content = "" # 번역할 최종 텍스트가 담길 곳
     file_name_display = ""
 
@@ -120,40 +132,18 @@ with tabs[2]:
     else: # 서버 저장소에서 선택 모드
         # 현재 폴더에서 파일 목록 가져오기
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        server_files = [f for f in os.listdir(current_dir) if f.endswith(('.txt', '.json', '.csv', '.xlsx'))]
-        # 2. 번역 실행 (내용이 있을 때만 버튼이 나옵니다)
-    if final_content:
-        st.divider()
-        st.info(f"현재 선택된 파일: **{file_name_display}**")
-        
-        if st.button("번역 실행하기 🚀"):
-            with st.spinner("전문 번역 엔진 가동 중..."):
-                try:
-                    # 파일 확장자에 따라 번역 방식 결정
-                    file_ext = file_name_display.split('.')[-1].lower()
-                    
-                    if file_ext == 'json':
-                        import json
-                        json_data = json.loads(final_content)
-                        # 윱늅님의 JSON 번역 함수 호출
-                        translated_data = translate_json(json_data, source_mode, lang_map[target_lang_name], is_natural)
-                        result = json.dumps(translated_data, ensure_ascii=False, indent=4)
-                    else:
-                        # 일반 텍스트 번역 (한 줄씩 번역)
-                        lines = final_content.splitlines()
-                        translated_lines = [smart_translate(l, source_mode, lang_map[target_lang_name], is_natural) for l in lines]
-                        result = "\n".join(translated_lines)
-                    
-                    st.success("✅ 번역이 완료되었습니다!")
-                    st.text_area("번역 결과", result, height=400)
-                    
-                    # 결과물 다운로드 버튼
-                    st.download_button(
-                        label="번역 결과 다운로드 📥",
-                        data=result,
-                        file_name=f"translated_{file_name_display}",
-                        mime="text/plain"
-                    )
-                
-                except Exception as e:
-                    st.error(f"번역 중 오류가 발생했습니다: {e}")
+        # 현재 폴더 안의 모든 파일과 하위 폴더 안의 파일까지 찾기
+server_files = []
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# os.walk를 사용하면 하위 폴더를 전부 뒤집니다.
+for root, dirs, files in os.walk(current_dir):
+    # .git 이나 .streamlit 같은 설정 폴더는 제외하고 싶을 때
+    if '.git' in dirs: dirs.remove('.git')
+    if '.streamlit' in dirs: dirs.remove('.streamlit')
+    
+    for file in files:
+        if file.endswith(('.txt', '.json', '.csv', '.xlsx')):
+            # 파일의 실제 위치(상대 경로)를 계산해서 목록에 넣습니다.
+            relative_path = os.path.relpath(os.path.join(root, file), current_dir)
+            server_files.append(relative_path)
