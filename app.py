@@ -6,7 +6,7 @@ import os
 import glob
 
 # --- 0. 페이지 설정 및 전역 스타일 ---
-st.set_page_config(page_title="윱늅 번역기",layout="wide")
+st.set_page_config(page_title="윱늅 번역기", layout="wide")
 
 # 세션 상태 초기화
 if 'history' not in st.session_state:
@@ -60,7 +60,6 @@ st.sidebar.subheader("🔮 교정 및 품질")
 main_mode = st.sidebar.radio("번역 스타일", ["기본 번역", "자연스러운 번역"])
 do_spell_check = st.sidebar.checkbox("지능형 맞춤법/문장 정제 활성화", value=True)
 
-# 모바일 로컬 구동용 설정
 st.sidebar.divider()
 st.sidebar.subheader("📱 모바일 전용 설정")
 local_mode = st.sidebar.checkbox("로컬 경로 직접 접근 모드 (Pydroid용)")
@@ -135,18 +134,17 @@ def translate_body(content, translator):
         final_output.append(line)
     return '\n'.join(final_output)
 
-# --- 3. 메인 화면 구성 (Tabs) ---
+# --- 3. 메인 화면 구성 ---
 st.markdown(f"### 윱늅이의 이상한 야매 번역기")
 tab_home, tab_file, tab_text = st.tabs(["🏠 홈", "📂 파일 번역 모드", "📝 텍스트 전용 모드"])
 
-# [TAB 1] 홈 화면
 with tab_home:
     col1, col2 = st.columns([1, 2])
     with col1:
         if os.path.exists("mascot.png"):
             st.image("mascot.png", use_container_width=True)
         else:
-            st.info("🎨 mascot.png 파일을 같은 폴더에 넣어주세요.")
+            st.info("🎨 mascot.png 파일을 올려주세요.")
     with col2:
         st.title("Welcome, Master.")
         st.markdown(f"""
@@ -156,14 +154,11 @@ with tab_home:
                 제없이 잘 작동할 거예요. 앞으로 계속 보강해 나갈게요.</p>
             </div>
         """, unsafe_allow_html=True)
-        st.subheader("🚀 가이드")
-        st.write("모바일로 구동하시려면 사이드바에서 **[로컬 경로 직접 접근 모드]**를 활성화하세요.")
 
-# [TAB 2] 파일 번역 모드
 with tab_file:
     st.header("📂 JSON 무결점 파일 번역기")
     if local_mode:
-        local_path = st.text_input("게임 데이터 폴더 경로 입력 (예: /storage/emulated/0/Download/game/www/data)", "")
+        local_path = st.text_input("게임 데이터 폴더 경로 입력", "")
         if st.button("🚀 폴더 내 모든 JSON 번역 시작") and local_path:
             json_files = glob.glob(os.path.join(local_path, "*.json"))
             if not json_files: st.error("해당 경로에 JSON 파일이 없습니다.")
@@ -187,7 +182,6 @@ with tab_file:
                     result = translate_body(body, translator)
                     st.download_button(f"📥 {up_file.name} 저장", result, f"ko_{up_file.name}")
 
-# [TAB 3] 텍스트 번역 모드
 with tab_text:
     st.header("📝 전문가용 텍스트 워크스테이션")
     col_in, col_out = st.columns(2)
