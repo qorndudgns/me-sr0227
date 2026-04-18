@@ -102,32 +102,58 @@ with tabs[1]:
 
 # 3. 파일 번역 (JSON/TXT)
 with tabs[2]:
-    st.header("📂 파일 일괄 번역")
-    uploaded_file = st.file_uploader("파일을 선택해주세요", type=['txt', 'json', 'csv', 'log'])
+    st.header("📂 파일 정밀 번역")
     
-    if uploaded_file:
-        file_ext = uploaded_file.name.split('.')[-1].lower()
+    # 1. 파일 출처 선택 (라디오 버튼)
+    file_source = st.radio("파일을 어디서 가져올까요?", ["내 기기에서 업로드", "서버 저장소에서 선택"], horizontal=True)
+    
+    final_content = "" # 번역할 최종 텍스트가 담길 곳
+    file_name_display = ""
+
+    if file_source == "내 기기에서 업로드":
+        uploaded_file = st.file_uploader("파일을 선택하세요", type=['txt', 'json', 'csv', 'xlsx'])
+        if uploaded_file is not None:
+            final_content = uploaded_file.read().decode("utf-8")
+            file_name_display = uploaded_file.name
+            st.success(f"✅ 업로드 완료: {file_name_display}")
+
+    else: # 서버 저장소에서 선택 모드
+        # 현재 폴더에서 파일 목록 가져오기
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        server_files = [f for f in os.listdir(current_dir) if f.endswith(('.txt', '.json', '.csv', '.xlsx'))]
+        # 2. 번역 실행 (내용이 있을 때만 버튼이 나옵니다)
+    if final_content:
+        st.divider()
+        st.info(f"현재 선택된 파일: **{file_name_display}**")
         
-        if st.button(f"{uploaded_file.name} 번역 실행 🚀"):
-            with st.spinner("정밀 번역 중..."):
+        if st.button("번역 실행하기 🚀"):
+            with st.spinner("전문 번역 엔진 가동 중..."):
                 try:
-                    if file_ext == 'json':
-                        json_data = json.load(uploaded_file)
-                        translated_data = translate_json(json_data, source_mode, lang_map[target_lang_name], is_natural)
-                        final_output = json.dumps(translated_data, ensure_ascii=False, indent=4)
-                    else:
-                        content = uploaded_file.read().decode("utf-8")
-                        lines = content.splitlines()
-                        translated_lines = [smart_translate(l, source_mode, lang_map[target_lang_name], is_natural) for l in lines]
-                        final_output = "\n".join(translated_lines)
+                    # 파일 확장자에 따라 번역 방식 결정
+                    file_ext = file_name_display.split('.')[-1].lower()
                     
-                    st.divider()
-                    st.text_area("번역 결과 미리보기", final_output, height=200)
+                    if file_ext == 'json':
+                        import json
+                        json_data = json.loads(final_content)
+                        # 윱늅님의 JSON 번역 함수 호출
+                        translated_data = translate_json(json_data, source_mode, lang_map[target_lang_name], is_natural)
+                        result = json.dumps(translated_data, ensure_ascii=False, indent=4)
+                    else:
+                        # 일반 텍스트 번역 (한 줄씩 번역)
+                        lines = final_content.splitlines()
+                        translated_lines = [smart_translate(l, source_mode, lang_map[target_lang_name], is_natural) for l in lines]
+                        result = "\n".join(translated_lines)
+                    
+                    st.success("✅ 번역이 완료되었습니다!")
+                    st.text_area("번역 결과", result, height=400)
+                    
+                    # 결과물 다운로드 버튼
                     st.download_button(
-                        label="번역된 파일 다운로드 💾",
-                        data=final_output,
-                        file_name=f"fixed_{uploaded_file.name}",
-                        mime="text/plain" if file_ext != 'json' else "application/json"
+                        label="번역 결과 다운로드 📥",
+                        data=result,
+                        file_name=f"translated_{file_name_display}",
+                        mime="text/plain"
                     )
+                
                 except Exception as e:
-                    st.error(f"파일 처리 중 오류 발생: {e}")
+                    st.error(f"번역 중 오류가 발생했습니다: {e}")
